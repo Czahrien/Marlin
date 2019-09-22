@@ -48,6 +48,10 @@
   float lcd_runout_distance_mm;
 #endif
 
+#if ENABLED(PHOTO_GCODE)
+  #include "../../feature/camera_park.h"
+#endif
+
 void menu_tmc();
 void menu_backlash();
 
@@ -402,6 +406,17 @@ void menu_backlash();
 
 #endif // SHOW_MENU_ADVANCED_TEMPERATURE
 
+#if ENABLED(PHOTO_GCODE) && defined(PHOTO_POSITION)
+  void menu_m240_park_configuration() {
+      START_MENU();
+      MENU_BACK(MSG_ADVANCED_SETTINGS);
+      MENU_ITEM_EDIT(bool, _UxGT("Park"), &pp_settings.park_enabled);
+      MENU_ITEM_EDIT(float3, _UxGT("X Position"), &pp_settings.photo_position[X_AXIS], X_MIN_POS, X_MAX_POS);
+      MENU_ITEM_EDIT(float3, _UxGT("Y Position"), &pp_settings.photo_position[Y_AXIS], Y_MIN_POS, Y_MAX_POS);
+      END_MENU();
+  }
+#endif
+
 #if DISABLED(SLIM_LCD_MENUS)
 
   void _reset_acceleration_rates() { planner.reset_acceleration_rates(); }
@@ -667,6 +682,10 @@ void menu_advanced_settings() {
 
   #if SHOW_MENU_ADVANCED_TEMPERATURE
     MENU_ITEM(submenu, MSG_TEMPERATURE, menu_advanced_temperature);
+  #endif
+
+  #if ENABLED(PHOTO_GCODE) && defined(PHOTO_POSITION)
+    MENU_ITEM(submenu, _UxGT("M240 Park"), menu_m240_park_configuration);
   #endif
 
   #if DISABLED(NO_VOLUMETRICS) || ENABLED(ADVANCED_PAUSE_FEATURE)

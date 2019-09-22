@@ -27,6 +27,12 @@
 #include "../../gcode.h"
 #include "../../../module/motion.h" // for active_extruder and current_position
 
+#include "../../../feature/camera_park.h" // for active_extruder and current_position
+
+#if ENABLED(HOST_ACTION_COMMANDS)
+  #include "../../../feature/host_actions.h"
+#endif
+
 #if PIN_EXISTS(CHDK)
   millis_t chdk_timeout; // = 0
 #endif
@@ -94,7 +100,6 @@
 void GcodeSuite::M240() {
 
   #ifdef PHOTO_POSITION
-
     if (axis_unhomed_error()) return;
 
     const float old_pos[XYZ] = {
@@ -121,27 +126,29 @@ void GcodeSuite::M240() {
     feedRate_t fr_mm_s = MMM_TO_MMS(parser.linearval('F'));
     if (fr_mm_s) NOLESS(fr_mm_s, 10.0f);
 
-    constexpr float photo_position[XYZ] = PHOTO_POSITION;
-    float raw[XYZ] = {
-       parser.seenval('X') ? RAW_X_POSITION(parser.value_linear_units()) : photo_position[X_AXIS],
-       parser.seenval('Y') ? RAW_Y_POSITION(parser.value_linear_units()) : photo_position[Y_AXIS],
-      (parser.seenval('Z') ? parser.value_linear_units() : photo_position[Z_AXIS]) + current_position[Z_AXIS]
-    };
-    apply_motion_limits(raw);
-    do_blocking_move_to(raw, fr_mm_s);
-
-    #ifdef PHOTO_SWITCH_POSITION
-      constexpr float photo_switch_position[2] = PHOTO_SWITCH_POSITION;
-      const float sraw[] = {
-         parser.seenval('I') ? RAW_X_POSITION(parser.value_linear_units()) : photo_switch_position[X_AXIS],
-         parser.seenval('J') ? RAW_Y_POSITION(parser.value_linear_units()) : photo_switch_position[Y_AXIS]
+    if(true == pp_settings.park_enabled) 
+    {
+      float raw[XYZ] = {
+        parser.seenval('X') ? RAW_X_POSITION(parser.value_linear_units()) : pp_settings.photo_position[X_AXIS],
+        parser.seenval('Y') ? RAW_Y_POSITION(parser.value_linear_units()) : pp_settings.photo_position[Y_AXIS],
+        (parser.seenval('Z') ? parser.value_linear_units() : pp_settings.photo_position[Z_AXIS]) + current_position[Z_AXIS]
       };
-      do_blocking_move_to_xy(sraw[X_AXIS], sraw[Y_AXIS], get_homing_bump_feedrate(X_AXIS));
-      #if PHOTO_SWITCH_MS > 0
-        safe_delay(parser.intval('D', PHOTO_SWITCH_MS));
+      apply_motion_limits(raw);
+      do_blocking_move_to(raw, fr_mm_s);
+
+      #ifdef PHOTO_SWITCH_POSITION
+        constexpr float photo_switch_position[2] = PHOTO_SWITCH_POSITION;
+        const float sraw[] = {
+          parser.seenval('I') ? RAW_X_POSITION(parser.value_linear_units()) : photo_switch_position[X_AXIS],
+          parser.seenval('J') ? RAW_Y_POSITION(parser.value_linear_units()) : photo_switch_position[Y_AXIS]
+        };
+        do_blocking_move_to_xy(sraw[X_AXIS], sraw[Y_AXIS], get_homing_bump_feedrate(X_AXIS));
+        #if PHOTO_SWITCH_MS > 0
+          safe_delay(parser.intval('D', PHOTO_SWITCH_MS));
+        #endif
+        do_blocking_move_to(raw);
       #endif
-      do_blocking_move_to(raw);
-    #endif
+    }
 
   #endif
 
@@ -156,6 +163,13 @@ void GcodeSuite::M240() {
     delay(7.33);
     spin_photo_pin();
 
+  #endif
+
+  #ifdef PHOTO_ACTION
+    host_action(PSTR(PHOTO_ACTION));
+    #if PHOTO_DELAY_MS > 0
+      safe_delay(PHOTO_DELAY_MS);
+    #endif
   #endif
 
   #ifdef PHOTO_POSITION
