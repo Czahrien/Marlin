@@ -32,7 +32,6 @@ void HAL_init();
 
 #include <stdint.h>
 #include <stdarg.h>
-#include <algorithm>
 
 extern "C" volatile uint32_t _millis;
 

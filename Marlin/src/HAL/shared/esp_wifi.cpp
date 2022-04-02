@@ -22,6 +22,7 @@
 
 #include "../../inc/MarlinConfig.h"
 #include "Delay.h"
+#include "../../core/debug_out.h"
 
 void esp_wifi_init(void) {                          // init ESP01 WIFI module pins
   #if PIN_EXISTS(ESP_WIFI_MODULE_GPIO0)
@@ -39,5 +40,13 @@ void esp_wifi_init(void) {                          // init ESP01 WIFI module pi
   #if PIN_EXISTS(ESP_WIFI_MODULE_ENABLE)
     delay(1);  // delay after reset released (0.1mS minimum)
     OUT_WRITE(ESP_WIFI_MODULE_ENABLE_PIN, HIGH);
+  #endif
+
+  #if 0
+    MYSERIAL1.print("AT+CWMODE=1\r\n");
+    MYSERIAL1.print("AT+CWJAP=\"Candy Moutain 2.4\",\"\"a slightly more secure wifi password lol\r\n");
+    MYSERIAL1.print("AT+CIPMUX=1\r\n");
+    MYSERIAL1.print("AT+CIPSERVER=1,80\r\n");
+    MYSERIAL1.print("AT+CIFSR\r\n");
   #endif
 }
